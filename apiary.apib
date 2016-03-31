@@ -1,0 +1,299 @@
+FORMAT: 1A
+HOST: http://localhost:3000/rest/restapi/{regionId}
+
+
+# TV Dashboard
+TV dashboard API provides access to personalized tv content recommendation data.
+Data provided by this API is normally presented in form of shelves, but no way 
+limited to that concept. To differ terminology from other modules that uses "content"
+and "item", Shelf and Cover was chosen. Shelf provides organization to Cover that is
+an actual presentation item of various types.
+
+
+Design starting points:
+* Clients wants to load categories at module startup also with complete 
+shelf list and all imediate Covers to switch them quickly. Later optimizations will 
+emerge so API should provide more fine grained data returns now. 
+* Explicit Cover can be removed from results at backend so consumer app can optimize
+request count (if UI hides explicit Cover, fetch count becomes unpredictable - TBD).
+
+
+Method call model:
+API should is't too chatty because of required snappines from UI.
+1. Fetch imediate data: RGID, Shelves/RGID, Cover/RGID (page 1), 
+2. a. Fetch next page data: Cover/RGID
+2. b. Purchase options fetch
+3. b. Similar content fetch
+
+
+Questions arised:
+* Is assumption of RGID and recommendation system model correct?
+* Show Series model
+
+Notes on caching:
+* Finite number of unique RGID benefits response caching.
+* No RGID means same response for all callers, based on common recommendation data.
+
+
+
+## Users recommendation profile [/{userId}/tvdashboard/profile]
+Recommendation system segments different users into finite number of interest groups.
+To get users RGID (Recomendation Group ID) use following method. Usually starting
+point of getting TV Dashboard content.
++ Parameters
+    + userId: `2342` (string)
+
+    
+### Get users recommendation profile [GET]
+    
++ Response 200 (application/json)
+
+        {
+            "RGID": 39567,
+            "usePersonalData": true // default:true; Indicates usage of private data at recommendation results. 
+        }
+        
+### Disable users recommendation [DELETE]
+User can opt out presonal recommendations based on his data. Existing data is deleted when this action
+is called.
+
++ Response 202 (application/json)
+    
+        {
+            "status": "success"
+        }
+
++ Response 400 (application/json)
+
+        {
+            "status": "error",
+            "errorCode": 2001,
+            "message": "User does not exits."
+        }
+
+
+
+## Shelves [/tvdashboard/shelves{?rgid,includeExplicit}]
++ Parameters
+    + rgid: `38f5` (string) - (Optional) Filters Cover list based on personalized
+     data. Otherwise result is based on "public" recommendation data.
+    + includeExplicit: `false` (boolean) - (Optional) Includes explicit (age rated) content.
+    
+    
+### List all Shelves [GET]
+Recommendation rank is denoted by order or by order property. Lower number higher 
+recommendation.
+
++ Response 200 (application/json)
+
+        [
+            {
+              "tag": "for_me", // special tag. included when rgid is present
+              "title": "For me"
+            },
+            {
+              "tag": "my_content", // special tag. included when rgid is present
+              "title": "My Content"
+            },
+            {
+              "tag": "comedy",
+              "title": "Comedy"
+            },
+            {
+              "tag": "action",
+              "title": "Action"
+            },
+            {
+              "tag": "adventure",
+              "title": "Adventure"
+            }
+        ]
+
+
+## Shelf covers list [/tvdashboard/covers{?shelfTag,rgid,page,includeExplicit}]
+Lists covers contained in some shelf. 
+
++ Parameters
+    + shelfTag (string) - Filters Cover list for some Shelf eg. "genre".
+    + rgid: `38f5` (string) - (Optional) Filters Cover list based on personalized
+     data. Otherwise result is based on "public" recommendation data.
+    + page: `0` (number) - (Optional) Returns some page.
+    + includeExplicit: `false` (boolean) - (Optional) Includes explicit (age rated) content.
+    
+### List covers of an shelf [GET]
+
+All items share common type Cover that brings fields: kind, entityId, title, order, poster, 
+background. Type is used to determine object type. Object can be mapped to aproppriate 
+type that poses no practical problems to device platforms therefore can be merged together 
+for easier handling. As dashboard combines multiple different entites their id can overlap,
+so they're combined with king for unique identification eq. at similar-covers call.
+
++ Response 200 (application/json)
+
+        {
+            "movies": 
+            [
+                {
+                    "entityId": 76341, // content info id ?
+                    "kind": "movie",
+                    "title": "Mad Max: Fury Road",
+                    "order": 1,
+                    "productId": 41232,
+                    "poster": "dashboard/images/en/197_mad_max_fury_road_poster.jpg",
+                    "background": "dashboard/images/en/197_mad_max_fury_road_background.jpg",
+                    "description": "An apocalyptic story set in the furthest reaches of our planet, in a stark desert landscape where humanity is broken, and most everyone is crazed fighting for the necessities of life. Within this world exist two rebels on the run who just might be able to restore order. There's Max, a man of action and a man of few words, who seeks peace of mind following the loss of his wife and child in the aftermath of the chaos. And Furiosa, a woman of action and a woman who believes her path to survival may be achieved if she can make it across the desert back to her childhood homeland.",
+                    "countries": [
+                        "AU",
+                        "US"
+                    ],
+                    "genres": [
+                        "Science Fiction",
+                        "Thriller",
+                        "Action",
+                        "Adventure"
+                    ],
+                    "duration": 7200,
+                    "year": 2015,
+                }
+            ],
+            "shows":
+            [
+                {
+                  "entityId": 1399,
+                  "kind": "show",
+                  "title": "Game of Thrones",
+                  "order": 2,
+                  "seriesId": 99,
+                  "channelId": 13,
+                  "poster": "dashboard/images/en/186_game_of_thrones_poster.jpg",
+                  "bacgkround": "dashboard/images/en/186_game_of_thrones_background.jpg",
+                  "description": "Seven noble families fight for control of the mythical land of Westeros. Friction between the houses leads to full-scale war. All while a very ancient evil awakens in the farthest north. Amidst the war, a neglected military order of misfits, the Night's Watch, is all that stands between the realms of men and icy horrors beyond.\n\n",
+                  "countries": [
+                    "US"
+                  ],
+                  "genres": [
+                    "Sci-Fi & Fantasy",
+                    "Drama",
+                    "History",
+                    "Action & Adventure"
+                  ],
+                  "runtime": 3600,
+                  "year": 2011,
+                  "end": 1456519800,
+                  "catchUpRecorded": true,
+                  "channelIcon": "dashboard/images/channels/fox-logo.png"
+                }
+            ],
+            "categories": [
+                {
+                    "entityId": 341, // vod category id
+                    "title": "Action",
+                    "order": 3,
+                    "kind": "category"
+                },
+                {
+                    "entityId": 342, // vod category id
+                    "title": "Kids",
+                    "order": 4,
+                    "kind": "category"
+                },
+                {
+                    "entityId": 343, // vod category id
+                    "title": "HBO",
+                    "order": 5,
+                    "kind": "category"
+                }
+            ],
+            "nextPageLink": "http://HOST/rest/restpi/{regionId}/tvdashboard/covers?page=1"
+        }
+        
+        
+        
+## Similar covers [/tvdashboard/similar-covers{?toCover,rgid,page,includeExplicit}]
+Returns similar Cover results to one indentified by toCoverId.
++ Parameters
+    + toCover: `movie-4324` (string) - Results for specific recommendation group id. Combo 
+    key constructed using template {kind}-{entityid}
+    + page: `0` (number) - (Optional) Results for page, 0 based.
+    + rgid: `38f5` (string) - (Optional) Filters Cover list based only on personalized data.    
+    + includeExplicit: `false` (boolean) - (Optional) Includes explicit (age rated) content.
+    
+### Similar covers [GET]
++ Response 200 (application/json)
+
+        {
+            "shows": Array[Show],
+            "movies": Array[Movie],
+            "categories": Array[Category],
+            "nextPageLink": "http://HOST/rest/restpi/{regionId}/tvdashboard/similar-covers?page=1"  
+        }
+        
+
+## Search [/search{?qry,page}]
+Returns list of results based on search query
++ Parameters
+    + qry: `news` (String) - Return results for that includes serach results.
+    + page: `0` (number) - (Optional) Results for page, 0 based.
+    
+### Search [GET]    
++ Response 200 (application/json)
+
+        {
+            "shows": Array[Show],
+            "movies": Array[Movie],
+            "categories": Array[Category],
+            "nextPageLink": "http://HOST/rest/restpi/{regionId}/search?page=1"  
+        }
+ 
+        
+# Data Structures
+
+## Cover
++ kind: "movie" (number) - Type of identifier (Show, Movie, Category).
++ entityId: "25" (string) - Link to external entity.
++ title: "Game of Thrones" (string) - Title of an item.
++ order: 2 (number) - Order among all items in this query
++ poster: 2 (number) - Link to an image.
++ background: 2 (number) - Link to an image.
+
+## Show (Cover)
++ kind
++ entityId
++ title
++ order
++ poster
++ background
+
++ countries: 2 (array[string]) - List of countries
++ genres: 2 (array[string]) - List of genrees
++ duration: 3600 (number) - Duration in seconds
++ year: 2 (number) - Year
++ start: 2 (number) - Start of program
++ catchUpRecorded: 2 (boolean) - Order among all items in this query
++ channelIcon: 2 (string) - Order among all items in this query
+
+## Movie (Cover)
++ kind
++ entityId
++ title
++ order
++ poster
++ background
+
++ seriesId: 99 (number) - Link to external entity.
++ channelId: 2 (number) - Link to external entity.
++ countries: 2 (array[string]) - List of countries
++ genres: 2 (array[string]) - List of genrees
++ duration: 3600 (number) - Duration in seconds
++ year: 2 (number) - Year
++ start: 2 (number) - Start of program
++ catchUpRecorded: 2 (boolean) - Order among all items in this query
++ channelIcon: 2 (string) - Order among all items in this query
+
+## Category (Cover)
++ kind
++ entityId
++ title
++ order
++ poster
++ background
