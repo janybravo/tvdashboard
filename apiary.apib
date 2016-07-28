@@ -5,52 +5,96 @@ HOST: http://localhost:3000/aggie/v1/
 # TV Dashboard
 TV dashboard API provides access to personalized tv content recommendation data.
 Data provided by this API is normally presented in form of rows. Row, Content and 
-VodCategory are main entities at recommendation dashboard API model. Row provides 
-organization to Contents that is an actual presentation content of various types.
-API is RESTfull by design featuring lowers the complexitiy of data aggregation, 
-request count for consuming applications. That comes with price of having user
-scope methods. 
-
-Design starting points:
-* Clients wants to load categories at module startup also with complete 
-shelf list and all imediate Contents to switch them quickly. Later optimizations will 
-emerge so API should provide more fine grained data returns now. 
+VoD category are main entities at recommendation dashboard API model. Row provides 
+organization to contents and is an actual presentation container of various types
+as VoD content, TV show, TV series.
+API is RESTfull by design, featuring lower complexity by pre-aggregating results, 
+lower request count for consuming applications and overall programming convenance. 
+That comes with price of having user scope methods with quick response times 
+required. 
 
 
-Method call model:
-API should isn't too chatty because of preloading required to achive UI snappines.
-1. Fetch imediate data: Rows, Content, Search index (page 1), 
-2. a. Fetch next page data: Content
-2. b. Purchase options fetch
-3. a. Similar content fetch
+## Method call model
+API isn't too chatty because of preloading required to achieve UI snappiness.
+#### 
+1. Level: fetch immediate data; when module starts.
+ - Row; complete hierarchy.
+ - Content; first page for all rows (except for low mem. devices).
+ - Bitmap images; first page for all rows.
+ - Profile data; any.
+ - ???? Search index; page 1, max 2 chars ~25^2 combs.
+2. Level: on demand data fetch; after initial data fetched and UI was generated.
+ - Next page results.
+ - Content details.
+ - Content ratings, likes, favorites.
+ - Next content in series.
+ - Search results.
+ - Playback data fetch (such as recordings from OA, make recordings, media info
+   from OA).
 
-
-Notes on caching:
-* Client Dashboard moduile caches dashboard data (case 1. from call model) 
-inside lifecycle of an app. Outside dashboard module life data is not there to conserve
-memory on STBs.
-
+## Application caching
+Applications are not expected to cache 2. level requests locally due to memory 
+constraints which isn't true for 1. level reuests. 
 
 ## Users recommendation profile [/{userId}/tvdashboard/profile]
 + Parameters
-    + userId: `2342` (string)
+    + userId: `1` (string)
     
 ### Get users recommendation profile [GET]
-    
+Returns user configuration specific to TV recommendation dashboard.
+
 + Response 200 (application/json)
 
         {
             "recommendationPersonalized": true,
-            "isDashboardDefaultScreen": true ,
+            "isDashboardDefaultScreen": true,
             "recommendationExplanation": true
         }
         
++ Response 400 (application/json)
+
+        {
+            "error": "userid-does-not-exist",
+            "message": "Desired user does not exist."
+        } 
+        
+## Change users recommendation profile [/{userId}/tvdashboard/profile{?recommendationPersonalized,isDashboardDefaultScreen,recommendationExplanation}]
+
++ Parameters
+    + userId: `1` (string) 
+    + recommendationPersonalized: `false` (boolean) - (Optional) Defaults to false.
+    + isDashboardDefaultScreen: `false` (boolean) - (Optional) Defaults to false.
+    + recommendationExplanation: `true` (boolean) - (Optional) Defaults to true.
+    
+### Change users recommendation profile [GET]
+Unspecified parameter doesn't change anything.
+
++ Response 200 (application/json)
+
+        {
+            "success": true
+        }
+
++ Response 400 (application/json)
+
+        {
+            "error": "userid-does-not-exist",
+            "message": "Desired user does not exist."
+        } 
+        
++ Response 400 (application/json)
+
+        {
+            "error": "bad-arguments",
+            "message": "Some property must be specified and value must be supported."
+        } 
+        
 ## Recommendation consent message [/{userId}/tvdashboard/consent{?language}]
 + Parameters
-    + userId: `2342` (string)
+    + userId: `1` (string)
     + language: `en` (string) - (Optional) Defaults to `en`.
     
-### Get users recommendation profile [GET]
+### Get message for users consent on private recommendation data usage [GET]
     
 + Response 200 (application/json)
 
@@ -61,69 +105,69 @@ memory on STBs.
 
 ## Rows [/{userId}/tvdashboard/rows{?language}]
 + Parameters
-    + language: `en` (string) - (Optional) Defaults to `en`  .
+    + language: `en` (string) - (Optional) Defaults to `en`.
 
 ### List all Rows [GET]
 Rows are returned completely in single response as data complexity is low and clients 
-are expected to store them in same manner. Tag is unique identifier of cateroies then 
+are expected to store them in same manner. Tag is unique identifier of categories then 
 used for content fetching. Recommendation rank is denoted by order. First presented 
-first in response. Titles are translated to english by default. 
-NOTE on object reconstruction: 2 entites are delivered here that inherits from same
-anchestor Row;
+first in response. Titles are translated to English by default. 
+NOTE on object reconstruction: 2 entities are delivered here that inherits from same
+ancestor Content;
 - Rows are denoted by type=contents.
-- Categories are denoted by lack of type field. Leaf categories has no list field.
+- Categories are denoted by lack of type field. Leaf categories have no list field.
 
 + Response 200 (application/json)
 
         [
             {
-              "tag": "for-me",
+              "rowTag": "for-me",
               "title": "For me"
               "type": "content"
             },
             {
-              "tag": "my-content",
+              "rowTag": "my-content",
               "title": "My Content",
               "type": "content"
             },
             {
-              "tag": "comedy",
+              "rowTag": "comedy",
               "title": "Comedy"
               "type": "content"
             },
             {
-              "tag": "action",
+              "rowTag": "action",
               "title": "Action",
               "type": "content"
             },
             {
-              "tag": "categories",
+              "rowTag": "categories",
               "title": "Categories",
               "list": [
                 {
-                    "tag": "drama",
+                    "rowTag": "drama",
                     "title": "Drama",
                     "color:": "#aa00cc"
                 },
                 {
-                    "tag": "scifi",
+                    "rowTag": "scifi",
                     "title": "Drama",
                     "color:": "#aa11cc",
                     "list": [
                         {
-                            "tag": "pero-dislikes",
+                            "rowTag": "pero-dislikes",
                             "title": "Pero dislikes",
                             "color": "#aabb00"
                         },
                         {
-                            "tag": "pero-dislikes-even-more",
+                            "rowTag": "pero-dislikes-even-more",
                             "title": "Pero dislikes even more",
                             "color": "#aabb11"
                         }
                     ]
                 },
                 {
-                    "tag": "cartoons",
+                    "rowTag": "cartoons",
                     "title": "Cartoons",
                     "color:": "#aacc00"
                 }                
@@ -135,7 +179,7 @@ anchestor Row;
 Lists content contained in some row. 
 
 + Parameters
-    + userId: `2342` (string)
+    + userId: `1` (string)
     + rowTag: `for-me` (string)
     + page: `2` (number) - (Optional) Returns some page.
     + pageSize: `10` (number) - (Optional) Defines page size from 1-50.
@@ -143,22 +187,21 @@ Lists content contained in some row.
 
 ### List of contents [GET]
 
-Method returns list of content to display forsome row. Results excludes genres and categories.
+Method returns list of content to display for some row. Results excludes genres and categories.
 Recommendation rank is denoted by order. First presented, first in response. Response 
-contains data needed for row view, short decription panel view and reference to next more
+contains data needed for row view, short description panel view, reference to next and more
 detailed call that brings all data needed for details screen, purchase making logic, etc. 
-Row is referenced by unique rowTag. Entity IDs are unique for recoomendation dashboard 
+Row is referenced by unique rowTag. Entity IDs are unique for recommendation dashboard 
 purpose. Some fields are limited in length. 
 
 Notes on object reconstruction:
-- Entities shares common Content type fileds that are augumented with Show, Series and VoD child types. 
+- Entities shares common Content type fields that are augmented with Show, Series and VoD child types. 
 - Entities types are determined by type field.
-- Fields anclosed within Content are always defined others are nullable.
-- Image links are hashes that are concstructed from templates that are response enclosed.
+- Fields enclosed within Content are always defined others are nullable.
+- Image links are hashes that are constructed from templates that are response enclosed.
 - externalId is reference for call before content playout, purchase, etc...
 
 + Response 200 (application/json)
-
        
         {
             "list": [
@@ -187,7 +230,7 @@ Notes on object reconstruction:
                     "start": 1469544033000,
                     "channelId": 5001,
                     "channelIcon": "<hash>",
-                    "chatchUpRecorded": true
+                    "catchUpRecorded": true
                 },
                 {
                     "id": "1002",
@@ -215,7 +258,7 @@ Notes on object reconstruction:
                     "start": 1469544033000,
                     "channelId": 5001,
                     "channelIcon": "<hash>",
-                    "chatchUpRecorded": true
+                    "catchUpRecorded": true
                 },
                 {
                     "id": "1003",
@@ -243,7 +286,7 @@ Notes on object reconstruction:
                     "start": null,
                     "channelId": null,
                     "channelIcon": null,
-                    "chatchUpRecorded": null
+                    "catchUpRecorded": null
                 }
             ],
             "linkTemplates": {
@@ -255,12 +298,41 @@ Notes on object reconstruction:
             "nextPageLink": "/aggie/1/tvdashboard/for-me/contents?language=si&page=3 // see above"
         }
 
++ Response 204 (no/body)
+ 
++ Response 400 (application/json)
 
+        {
+            "error": "userid-does-not-exist",
+            "message": "Desired user does not exist."
+        } 
+        
++ Response 400 (application/json)
+
+        {
+            "error": "language-is-unavailable-for-row",
+            "message": "Translation is unavailable."
+        }   
+        
++ Response 400 (application/json)
+
+        {
+            "error": "content-id-does-not-exist",
+            "message": "Desired content does not exits."
+        } 
+        
++ Response 400 (application/json)
+
+        {
+            "error": "row-does-not-exist",
+            "message": "Row does not exits."
+        } 
+ 
 ## Content details [/{userId}/tvdashboard/rows/{rowTag}/contents/{id}{?language,sibling}]
 Content details.
 
 + Parameters
-    + userId: `2342` (string)
+    + userId: `1` (string)
     + rowTag: `for-me` (string)
     + id: `2342` (string)
     + language: `en` (string) - (Optional) Defaults to `en`.
@@ -305,7 +377,7 @@ referenced.
                     "start": 1469544033000,
                     "channelId": 5001,
                     "channelIcon": "<hash>",
-                    "chatchUpRecorded": true
+                    "catchUpRecorded": true
                     
                     "externalId": "31534"
                 }
@@ -316,68 +388,90 @@ referenced.
                 "channelIcon": "http://hostnameC/images/{{hash}}"
             }
         }
-        
-+ Response 400
+    
++ Response 400 (application/json)
 
         {
-            "error": 'language-is-unavailable-for-content',
-            "message": 'Desired content has no translation in desired language.',
-        }   
-        
-+ Response 400
-
-        {
-            "error": 'content-id-does-not-exist',
-            "message": 'Desired content does not exits.',
+            "error": "userid-does-not-exist",
+            "message": "Desired user does not exist."
         } 
         
-+ Response 400
++ Response 400 (application/json)
 
         {
-            "error": 'next-sibling-doesn-not-exist',
-            "message": 'Desired content has no next sibling.',
+            "error": "language-is-unavailable-for-content",
+            "message": "Translation is unavailable."
+        }   
+        
++ Response 400 (application/json)
+
+        {
+            "error": "content-id-does-not-exist",
+            "message": "Desired content does not exits."
+        } 
+        
++ Response 400 (application/json)
+
+        {
+            "error": "row-does-not-exist",
+            "message": "Row does not exits."
+        } 
+        
++ Response 400 (application/json)
+
+        {
+            "error": "next-sibling-doesn-not-exist",
+            "message": "Desired content has no next sibling."
         }
         
-+ Response 400
++ Response 400 (application/json)
 
         {
-            "error": 'previous-sibling-doesn-not-exist',
-            "message": 'Desired content has no previous sibling.',
+            "error": "previous-sibling-doesn-not-exist",
+            "message": "Desired content has no previous sibling."
         }
         
         
         
 
 ## Users properites of an Content [/{userId}/tvdashboard/rows/{rowTag}/contents/{id}{?watched}]
-Method updates various properies of a Content in users context. 
+Method updates various properties of a Content in users context. Unspecified parameter doesn't
+change anything.
 
 + Parameters
-    + userId: `2342` (string)
+    + userId: `1` (string)
     + rowTag: `for-me` (string)
     + id: `2342` (string)
     + watched: true (boolean) - (Optional)
     
-### Update properites of an Content [PUT]
+### Update properties of an Content [PUT]
     
 + Response 200 (application/json)
 
         {
-            "sucess": true,
+            "success": true,
         }
- 
+        
++ Response 400 (application/json)
+
+        {
+            "error": "bad-arguments",
+            "message": "Some property must be specified and value must be supported."
+        }  
  
 
 ## Search [/{userId}/tvdashboard/contents/search{?q,page,language}]
-Search provides slimmed response as much as possible for quick transmision and parsing.
+Search provides slimmed response as much as possible for quick transmission and parsing.
+Too short query string returns HTTP 400. Empty query result returns HTTP 204. 
 
 + Parameters
-    + q: `news` (String) - Return results for that includes serach results.
+    + q: `news` (String) - Return results for that includes search results.
     + page: `1` (number) - (Optional) Results for page, 1 based.
     + language: `en` (string) - (Optional) Defaults to `en`.
     
-### Search [GET]    
-        
- + Response 200 (application/json)
+### Search [GET]  
+
++ Response 200 (application/json)
 
         {
             "list": [
@@ -395,10 +489,20 @@ Search provides slimmed response as much as possible for quick transmision and p
                     
                     "start": 1469544033000,
                     "channelId": 5001,
-                    "channelIcon": "<hash>",
                     "chatchUpRecorded": true
                 }
             ],
             "previousPageLink": "/aggie/1/tvdashboard/contents/search?language=si&page=1,
             "nextPageLink": "/aggie/1/tvdashboard/contents/search?language=si&page=3
+        }
+        
++ Response 204 (no body)
+ 
+
++ Response 400 (application/json)
+ 
+
+        {
+            "error": "query-too-short",
+            "message": "q parameter must be longer than 3 characters.",           
         }
