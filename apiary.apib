@@ -1,299 +1,404 @@
 FORMAT: 1A
-HOST: http://localhost:3000/rest/restapi/{regionId}
+HOST: http://localhost:3000/aggie/v1/
 
 
 # TV Dashboard
 TV dashboard API provides access to personalized tv content recommendation data.
-Data provided by this API is normally presented in form of shelves, but no way 
-limited to that concept. To differ terminology from other modules that uses "content"
-and "item", Shelf and Cover was chosen. Shelf provides organization to Cover that is
-an actual presentation item of various types.
-
+Data provided by this API is normally presented in form of rows. Row, Content and 
+VodCategory are main entities at recommendation dashboard API model. Row provides 
+organization to Contents that is an actual presentation content of various types.
+API is RESTfull by design featuring lowers the complexitiy of data aggregation, 
+request count for consuming applications. That comes with price of having user
+scope methods. 
 
 Design starting points:
 * Clients wants to load categories at module startup also with complete 
-shelf list and all imediate Covers to switch them quickly. Later optimizations will 
+shelf list and all imediate Contents to switch them quickly. Later optimizations will 
 emerge so API should provide more fine grained data returns now. 
-* Explicit Cover can be removed from results at backend so consumer app can optimize
-request count (if UI hides explicit Cover, fetch count becomes unpredictable - TBD).
 
 
 Method call model:
-API should is't too chatty because of required snappines from UI.
-1. Fetch imediate data: RGID, Shelves/RGID, Cover/RGID (page 1), 
-2. a. Fetch next page data: Cover/RGID
+API should isn't too chatty because of preloading required to achive UI snappines.
+1. Fetch imediate data: Rows, Content, Search index (page 1), 
+2. a. Fetch next page data: Content
 2. b. Purchase options fetch
-3. b. Similar content fetch
+3. a. Similar content fetch
 
-
-Questions arised:
-* Is assumption of RGID and recommendation system model correct?
-* Show Series model
 
 Notes on caching:
-* Finite number of unique RGID benefits response caching.
-* No RGID means same response for all callers, based on common recommendation data.
-
+* Client Dashboard moduile caches dashboard data (case 1. from call model) 
+inside lifecycle of an app. Outside dashboard module life data is not there to conserve
+memory on STBs.
 
 
 ## Users recommendation profile [/{userId}/tvdashboard/profile]
-Recommendation system segments different users into finite number of interest groups.
-To get users RGID (Recomendation Group ID) use following method. Usually starting
-point of getting TV Dashboard content.
 + Parameters
     + userId: `2342` (string)
-
     
 ### Get users recommendation profile [GET]
     
 + Response 200 (application/json)
 
         {
-            "RGID": 39567,
-            "usePersonalData": true // default:true; Indicates usage of private data at recommendation results. 
+            "recommendationPersonalized": true,
+            "isDashboardDefaultScreen": true ,
+            "recommendationExplanation": true
         }
         
-### Disable users recommendation [DELETE]
-User can opt out presonal recommendations based on his data. Existing data is deleted when this action
-is called.
-
-+ Response 202 (application/json)
-    
-        {
-            "status": "success"
-        }
-
-+ Response 400 (application/json)
-
-        {
-            "status": "error",
-            "errorCode": 2001,
-            "message": "User does not exits."
-        }
-
-
-
-## Shelves [/tvdashboard/shelves{?rgid,includeExplicit}]
+## Recommendation consent message [/{userId}/tvdashboard/consent{?language}]
 + Parameters
-    + rgid: `38f5` (string) - (Optional) Filters Cover list based on personalized
-     data. Otherwise result is based on "public" recommendation data.
-    + includeExplicit: `false` (boolean) - (Optional) Includes explicit (age rated) content.
+    + userId: `2342` (string)
+    + language: `en` (string) - (Optional) Defaults to `en`.
     
+### Get users recommendation profile [GET]
     
-### List all Shelves [GET]
-Recommendation rank is denoted by order or by order property. Lower number higher 
-recommendation.
++ Response 200 (application/json)
+
+        {
+            "message": "Consent text here" 
+        }
+
+
+## Rows [/{userId}/tvdashboard/rows{?language}]
++ Parameters
+    + language: `en` (string) - (Optional) Defaults to `en`  .
+
+### List all Rows [GET]
+Rows are returned completely in single response as data complexity is low and clients 
+are expected to store them in same manner. Tag is unique identifier of cateroies then 
+used for content fetching. Recommendation rank is denoted by order. First presented 
+first in response. Titles are translated to english by default. 
+NOTE on object reconstruction: 2 entites are delivered here that inherits from same
+anchestor Row;
+- Rows are denoted by type=contents.
+- Categories are denoted by lack of type field. Leaf categories has no list field.
 
 + Response 200 (application/json)
 
         [
             {
-              "tag": "for_me", // special tag. included when rgid is present
+              "tag": "for-me",
               "title": "For me"
+              "type": "content"
             },
             {
-              "tag": "my_content", // special tag. included when rgid is present
-              "title": "My Content"
+              "tag": "my-content",
+              "title": "My Content",
+              "type": "content"
             },
             {
               "tag": "comedy",
               "title": "Comedy"
+              "type": "content"
             },
             {
               "tag": "action",
-              "title": "Action"
+              "title": "Action",
+              "type": "content"
             },
             {
-              "tag": "adventure",
-              "title": "Adventure"
+              "tag": "categories",
+              "title": "Categories",
+              "list": [
+                {
+                    "tag": "drama",
+                    "title": "Drama",
+                    "color:": "#aa00cc"
+                },
+                {
+                    "tag": "scifi",
+                    "title": "Drama",
+                    "color:": "#aa11cc",
+                    "list": [
+                        {
+                            "tag": "pero-dislikes",
+                            "title": "Pero dislikes",
+                            "color": "#aabb00"
+                        },
+                        {
+                            "tag": "pero-dislikes-even-more",
+                            "title": "Pero dislikes even more",
+                            "color": "#aabb11"
+                        }
+                    ]
+                },
+                {
+                    "tag": "cartoons",
+                    "title": "Cartoons",
+                    "color:": "#aacc00"
+                }                
+              ]
             }
         ]
 
-
-## Shelf covers list [/tvdashboard/covers{?shelfTag,rgid,page,includeExplicit}]
-Lists covers contained in some shelf. 
+## Row's list of contents  [/{userId}/tvdashboard/rows/{rowTag}/content{?page,pageSize,language}]
+Lists content contained in some row. 
 
 + Parameters
-    + shelfTag (string) - Filters Cover list for some Shelf eg. "genre".
-    + rgid: `38f5` (string) - (Optional) Filters Cover list based on personalized
-     data. Otherwise result is based on "public" recommendation data.
-    + page: `0` (number) - (Optional) Returns some page.
-    + includeExplicit: `false` (boolean) - (Optional) Includes explicit (age rated) content.
-    
-### List covers of an shelf [GET]
+    + userId: `2342` (string)
+    + rowTag: `for-me` (string)
+    + page: `2` (number) - (Optional) Returns some page.
+    + pageSize: `10` (number) - (Optional) Defines page size from 1-50.
+    + language: `en` (string) - (Optional) Defaults to `en`.
 
-All items share common type Cover that brings fields: kind, entityId, title, order, poster, 
-background. Type is used to determine object type. Object can be mapped to aproppriate 
-type that poses no practical problems to device platforms therefore can be merged together 
-for easier handling. As dashboard combines multiple different entites their id can overlap,
-so they're combined with king for unique identification eq. at similar-covers call.
+### List of contents [GET]
+
+Method returns list of content to display forsome row. Results excludes genres and categories.
+Recommendation rank is denoted by order. First presented, first in response. Response 
+contains data needed for row view, short decription panel view and reference to next more
+detailed call that brings all data needed for details screen, purchase making logic, etc. 
+Row is referenced by unique rowTag. Entity IDs are unique for recoomendation dashboard 
+purpose. Some fields are limited in length. 
+
+Notes on object reconstruction:
+- Entities shares common Content type fileds that are augumented with Show, Series and VoD child types. 
+- Entities types are determined by type field.
+- Fields anclosed within Content are always defined others are nullable.
+- Image links are hashes that are concstructed from templates that are response enclosed.
+- externalId is reference for call before content playout, purchase, etc...
 
 + Response 200 (application/json)
 
+       
         {
-            "movies": 
-            [
+            "list": [
                 {
-                    "entityId": 76341, // content info id ?
-                    "kind": "movie",
-                    "title": "Mad Max: Fury Road",
-                    "order": 1,
-                    "productId": 41232,
-                    "poster": "dashboard/images/en/197_mad_max_fury_road_poster.jpg",
-                    "background": "dashboard/images/en/197_mad_max_fury_road_background.jpg",
-                    "description": "An apocalyptic story set in the furthest reaches of our planet, in a stark desert landscape where humanity is broken, and most everyone is crazed fighting for the necessities of life. Within this world exist two rebels on the run who just might be able to restore order. There's Max, a man of action and a man of few words, who seeks peace of mind following the loss of his wife and child in the aftermath of the chaos. And Furiosa, a woman of action and a woman who believes her path to survival may be achieved if she can make it across the desert back to her childhood homeland.",
-                    "countries": [
-                        "AU",
-                        "US"
-                    ],
-                    "genres": [
-                        "Science Fiction",
-                        "Thriller",
-                        "Action",
-                        "Adventure"
-                    ],
-                    "duration": 7200,
-                    "year": 2015,
-                }
-            ],
-            "shows":
-            [
-                {
-                  "entityId": 1399,
-                  "kind": "show",
-                  "title": "Game of Thrones",
-                  "order": 2,
-                  "seriesId": 99,
-                  "channelId": 13,
-                  "poster": "dashboard/images/en/186_game_of_thrones_poster.jpg",
-                  "bacgkround": "dashboard/images/en/186_game_of_thrones_background.jpg",
-                  "description": "Seven noble families fight for control of the mythical land of Westeros. Friction between the houses leads to full-scale war. All while a very ancient evil awakens in the farthest north. Amidst the war, a neglected military order of misfits, the Night's Watch, is all that stands between the realms of men and icy horrors beyond.\n\n",
-                  "countries": [
-                    "US"
-                  ],
-                  "genres": [
-                    "Sci-Fi & Fantasy",
-                    "Drama",
-                    "History",
-                    "Action & Adventure"
-                  ],
-                  "runtime": 3600,
-                  "year": 2011,
-                  "end": 1456519800,
-                  "catchUpRecorded": true,
-                  "channelIcon": "dashboard/images/channels/fox-logo.png"
-                }
-            ],
-            "categories": [
-                {
-                    "entityId": 341, // vod category id
-                    "title": "Action",
-                    "order": 3,
-                    "kind": "category"
+                    "id": "1001",
+                    "type": "series",
+                    "title": "House of Cards",
+                    "description": "A Congressman works with his equally conniving wife to exact revenge on the people who betrayed him. //max 200 chars",
+                    "poster": "<hash>",
+                    "background": "<hash>",
+                    "cast": "Kevin Spacey, Michel Gill, Robin Wright // max 50 chars",
+                    "directors": "James Foley, Robin Wright //max 50 chars",
+                    "year": 2016,
+                    "country": "USA",
+                    "genre": "drama, crime",
+                    "duration": 3600,
+                    "rating": {"age": 14, "imdb": 9.0, "user": 9.6},
+                    "watched": true,
+        
+                    "recommendationExplanation": "Because you watched Something",
+        
+                    "series": {"season": 1, "episode": 1, "lastWatchedSeason": 2},
+                    "subTitle": "Chapter 52",
+                    "contentKey": "series-1001",
+                    
+                    "start": 1469544033000,
+                    "channelId": 5001,
+                    "channelIcon": "<hash>",
+                    "chatchUpRecorded": true
                 },
                 {
-                    "entityId": 342, // vod category id
-                    "title": "Kids",
-                    "order": 4,
-                    "kind": "category"
+                    "id": "1002",
+                    "type": "show",
+                    "title": "Plastik fantastik",
+                    "description": "Odličen slovenski dokumentarec o plastiki z malo drugačnega zornega kota, njenih vplivih na vas in okolje.",
+                    "poster": "<hash>",
+                    "background": "<hash>",
+                    "cast": "Uroš Robič, Žiga Čamernik",
+                    "directors": "Uroš Robič, Miha Dulmin",
+                    "year": 2013,
+                    "country": "SI",
+                    "genre": "drama",
+                    "duration": 4140,
+                    "rating": {"age": 0, "imdb": null, "user": 9.6},
+                    "watched": true,
+                    "resource": null,
+                     
+                    "recommendationExplanation": "Because you watched something",
+        
+                    "series": null,
+                    "subTitle": null,
+                    "contentKey": null,
+        
+                    "start": 1469544033000,
+                    "channelId": 5001,
+                    "channelIcon": "<hash>",
+                    "chatchUpRecorded": true
                 },
                 {
-                    "entityId": 343, // vod category id
-                    "title": "HBO",
-                    "order": 5,
-                    "kind": "category"
+                    "id": "1003",
+                    "type": "vod",
+                    "title": "Deadpool",
+                    "description": "A former Special Forces operative turned mercenary is subjected to a rogue experiment that leaves him with accelerated healing powers, adopting the...",
+                    "poster": "<hash>",
+                    "background": "<hash>",
+                    "cast": "Ryan Reynolds, Morena Baccarin, T.J. Miller",
+                    "directors": "Tim Miller",
+                    "year": 2016,
+                    "country": "USA",
+                    "genre": "action, adventure, comedy",
+                    "duration": 6480,
+                    "rating": {"age": 12, "imdb": 8.1, "user": 7.2},
+                    "watched": false,
+                    "resource": null,
+                       
+                    "recommendationExplanation": null,
+        
+                    "series": null,
+                    "subTitle": null,
+                    "contentKey": null,
+                     
+                    "start": null,
+                    "channelId": null,
+                    "channelIcon": null,
+                    "chatchUpRecorded": null
                 }
             ],
-            "nextPageLink": "http://HOST/rest/restpi/{regionId}/tvdashboard/covers?page=1"
+            "linkTemplates": {
+                "poster": "http://hostnameA/images/{{hash}} //quality is determined by app, absolute URL",
+                "background": "http://hostnameB/images/{{hash}} // see above",
+                "channelIcon": "http://hostnameC/images/{{hash}} // see above"
+            },
+            "previousPageLink": "/aggie/1/tvdashboard/for-me/contents?language=si&page=1 //updated page parameters from request",
+            "nextPageLink": "/aggie/1/tvdashboard/for-me/contents?language=si&page=3 // see above"
+        }
+
+
+## Content details [/{userId}/tvdashboard/rows/{rowTag}/contents/{id}{?language,sibling}]
+Content details.
+
++ Parameters
+    + userId: `2342` (string)
+    + rowTag: `for-me` (string)
+    + id: `2342` (string)
+    + language: `en` (string) - (Optional) Defaults to `en`.
+    + sibling: `next|previous` (string) - (Optional) Ignored by default.
+
+### Content details [GET]
+Method returns single Content's child types without some restrictions as long strings 
+trimming and featuring extra fields. Method can return next or previous sibling of 
+specified contents id.
+Notes on parsing: 
+- Additional field: productId, populated where there could be some entity from MW 
+referenced. 
+
+
++ Response 200 (application/json)
+
+       
+        {
+            "list": [
+                {
+                    "id": "1001",
+                    "type": "series",
+                    "title": "House of Cards",
+                    "description": "A Congressman works with his equally conniving wife to exact revenge on the people who betrayed him.",
+                    "poster": "<hash>",
+                    "background": "<hash>",
+                    "cast": "Kevin Spacey, Michel Gill, Robin Wright",
+                    "directors": "James Foley, Robin Wright",
+                    "year": 2016,
+                    "country": "USA",
+                    "genre": "drama, crime",
+                    "duration": 3600,
+                    "rating": {"age": 14, "imdb": 9.0, "user": 9.6},
+                    "watched": true,
+                    
+                    "series": {"season": 3, "episode": 13, "lastWatchedSeason": 2},
+                    "subTitle": "Chapter 52",
+                    "contentKey": "series-1001",
+                    
+                    "recommendationExplanation": null,
+                    
+                    "start": 1469544033000,
+                    "channelId": 5001,
+                    "channelIcon": "<hash>",
+                    "chatchUpRecorded": true
+                    
+                    "externalId": "31534"
+                }
+            ],
+            "linkTemplates": {
+                "poster": "http://hostnameA/images/{{hash}}",
+                "background": "http://hostnameB/images/{{hash}}",
+                "channelIcon": "http://hostnameC/images/{{hash}}"
+            }
+        }
+        
++ Response 400
+
+        {
+            "error": 'language-is-unavailable-for-content',
+            "message": 'Desired content has no translation in desired language.',
+        }   
+        
++ Response 400
+
+        {
+            "error": 'content-id-does-not-exist',
+            "message": 'Desired content does not exits.',
+        } 
+        
++ Response 400
+
+        {
+            "error": 'next-sibling-doesn-not-exist',
+            "message": 'Desired content has no next sibling.',
+        }
+        
++ Response 400
+
+        {
+            "error": 'previous-sibling-doesn-not-exist',
+            "message": 'Desired content has no previous sibling.',
         }
         
         
         
-## Similar covers [/tvdashboard/similar-covers{?toCover,rgid,page,includeExplicit}]
-Returns similar Cover results to one indentified by toCoverId.
+
+## Users properites of an Content [/{userId}/tvdashboard/rows/{rowTag}/contents/{id}{?watched}]
+Method updates various properies of a Content in users context. 
+
 + Parameters
-    + toCover: `movie-4324` (string) - Results for specific recommendation group id. Combo 
-    key constructed using template {kind}-{entityid}
-    + page: `0` (number) - (Optional) Results for page, 0 based.
-    + rgid: `38f5` (string) - (Optional) Filters Cover list based only on personalized data.    
-    + includeExplicit: `false` (boolean) - (Optional) Includes explicit (age rated) content.
+    + userId: `2342` (string)
+    + rowTag: `for-me` (string)
+    + id: `2342` (string)
+    + watched: true (boolean) - (Optional)
     
-### Similar covers [GET]
+### Update properites of an Content [PUT]
+    
 + Response 200 (application/json)
 
         {
-            "shows": Array[Show],
-            "movies": Array[Movie],
-            "categories": Array[Category],
-            "nextPageLink": "http://HOST/rest/restpi/{regionId}/tvdashboard/similar-covers?page=1"  
-        }
-        
-
-## Search [/search{?qry,page}]
-Returns list of results based on search query
-+ Parameters
-    + qry: `news` (String) - Return results for that includes serach results.
-    + page: `0` (number) - (Optional) Results for page, 0 based.
-    
-### Search [GET]    
-+ Response 200 (application/json)
-
-        {
-            "shows": Array[Show],
-            "movies": Array[Movie],
-            "categories": Array[Category],
-            "nextPageLink": "http://HOST/rest/restpi/{regionId}/search?page=1"  
+            "sucess": true,
         }
  
+ 
+
+## Search [/{userId}/tvdashboard/contents/search{?q,page,language}]
+Search provides slimmed response as much as possible for quick transmision and parsing.
+
++ Parameters
+    + q: `news` (String) - Return results for that includes serach results.
+    + page: `1` (number) - (Optional) Results for page, 1 based.
+    + language: `en` (string) - (Optional) Defaults to `en`.
+    
+### Search [GET]    
         
-# Data Structures
+ + Response 200 (application/json)
 
-## Cover
-+ kind: "movie" (number) - Type of identifier (Show, Movie, Category).
-+ entityId: "25" (string) - Link to external entity.
-+ title: "Game of Thrones" (string) - Title of an item.
-+ order: 2 (number) - Order among all items in this query
-+ poster: 2 (number) - Link to an image.
-+ background: 2 (number) - Link to an image.
-
-## Show (Cover)
-+ kind
-+ entityId
-+ title
-+ order
-+ poster
-+ background
-
-+ countries: 2 (array[string]) - List of countries
-+ genres: 2 (array[string]) - List of genrees
-+ duration: 3600 (number) - Duration in seconds
-+ year: 2 (number) - Year
-+ start: 2 (number) - Start of program
-+ catchUpRecorded: 2 (boolean) - Order among all items in this query
-+ channelIcon: 2 (string) - Order among all items in this query
-
-## Movie (Cover)
-+ kind
-+ entityId
-+ title
-+ order
-+ poster
-+ background
-
-+ seriesId: 99 (number) - Link to external entity.
-+ channelId: 2 (number) - Link to external entity.
-+ countries: 2 (array[string]) - List of countries
-+ genres: 2 (array[string]) - List of genrees
-+ duration: 3600 (number) - Duration in seconds
-+ year: 2 (number) - Year
-+ start: 2 (number) - Start of program
-+ catchUpRecorded: 2 (boolean) - Order among all items in this query
-+ channelIcon: 2 (string) - Order among all items in this query
-
-## Category (Cover)
-+ kind
-+ entityId
-+ title
-+ order
-+ poster
-+ background
+        {
+            "list": [
+                {
+                    "id": "1001",
+                    "type": "series",
+                    "title": "House of Cards",
+                    "description": "A Congressman works with his equally conniving wife to exact revenge on the people who betrayed him.",
+                    "duration": 3600,
+                    "rating": {"age": 14, "imdb": 9.0, "user": 9.6},
+                    "watched": true,
+                    
+                    "series": {"season": 3, "episode": 13, "lastWatchedSeason": 2},
+                    "subTitle": "Chapter 52",
+                    
+                    "start": 1469544033000,
+                    "channelId": 5001,
+                    "channelIcon": "<hash>",
+                    "chatchUpRecorded": true
+                }
+            ],
+            "previousPageLink": "/aggie/1/tvdashboard/contents/search?language=si&page=1,
+            "nextPageLink": "/aggie/1/tvdashboard/contents/search?language=si&page=3
+        }
