@@ -22,7 +22,6 @@ API isn't too chatty because of preloading required to achieve UI snappiness.
  - Content; first page for all rows (except for low mem. devices).
  - Bitmap images; first page for all rows.
  - Profile data; any.
- - ???? Search index; page 1, max 2 chars ~25^2 combs.
 2. Level: on demand data fetch; after initial data fetched and UI was generated.
  - Next page results.
  - Content details.
@@ -121,73 +120,69 @@ ancestor Content;
 
         [
             {
-              "rowTag": "for-me",
+              "id": "for-me",
               "title": "For me"
-              "type": "content"
             },
             {
-              "rowTag": "my-content",
-              "title": "My Content",
-              "type": "content"
+              "id": "my-content",
+              "title": "My Content"
             },
             {
-              "rowTag": "comedy",
+              "id": "comedy",
               "title": "Comedy"
-              "type": "content"
             },
             {
-              "rowTag": "action",
-              "title": "Action",
-              "type": "content"
+              "id": "action",
+              "title": "Action"
             },
             {
-              "rowTag": "categories",
+              "id": "categories",
               "title": "Categories",
               "list": [
                 {
-                    "rowTag": "drama",
-                    "title": "Drama",
-                    "color:": "#aa00cc"
+                    "id": "popular",
+                    "title": "Popular",
+                    "color": "#aa00cc"
                 },
                 {
-                    "rowTag": "scifi",
+                    "id": "scifi",
                     "title": "Drama",
-                    "color:": "#aa11cc",
+                    "color": "#aa11cc"
                     "list": [
                         {
-                            "rowTag": "pero-dislikes",
+                            "id": "pero-dislikes",
                             "title": "Pero dislikes",
                             "color": "#aabb00"
                         },
                         {
-                            "rowTag": "pero-dislikes-even-more",
+                            "id": "pero-dislikes-even-more",
                             "title": "Pero dislikes even more",
                             "color": "#aabb11"
                         }
                     ]
                 },
                 {
-                    "rowTag": "cartoons",
+                    "id": "cartoons",
                     "title": "Cartoons",
-                    "color:": "#aacc00"
+                    "color": "#aacc00"
                 }                
               ]
             }
         ]
 
-## Row's list of contents  [/{userId}/tvdashboard/rows/{rowTag}/content{?page,pageSize,language}]
-Lists content contained in some row. 
+## Row's list of contents  [/{userId}/tvdashboard/contents{?rowIds,page,pageSize,language}]
+Lists contents filtered by row ids.
 
 + Parameters
     + userId: `1` (string)
-    + rowTag: `for-me` (string)
+    + rowIds: `for-me` (array) Comma separated row identification strings.
     + page: `2` (number) - (Optional) Returns some page.
     + pageSize: `10` (number) - (Optional) Defines page size from 1-50.
     + language: `en` (string) - (Optional) Defaults to `en`.
 
 ### List of contents [GET]
 
-Method returns list of content to display for some row. Results excludes genres and categories.
+Method returns list of content to display for some row.
 Recommendation rank is denoted by order. First presented, first in response. Response 
 contains data needed for row view, short description panel view, reference to next and more
 detailed call that brings all data needed for details screen, purchase making logic, etc. 
@@ -204,21 +199,23 @@ Notes on object reconstruction:
 + Response 200 (application/json)
        
         {
-            "list": [
+            "rows": 
+            { "mycontent":
                 {
                     "id": "1001",
                     "type": "series",
                     "title": "House of Cards",
-                    "description": "A Congressman works with his equally conniving wife to exact revenge on the people who betrayed him. //max 200 chars",
+                    "description": "A Congressman works with his equally conniving wife to exact revenge on the people who betrayed him.",
                     "poster": "<hash>",
                     "background": "<hash>",
-                    "cast": "Kevin Spacey, Michel Gill, Robin Wright // max 50 chars",
-                    "directors": "James Foley, Robin Wright //max 50 chars",
+                    "cast": ["Kevin Spacey", "Michel Gill", "Robin Wright"],
+                    "directors": ["James Foley", "Robin Wright"],
                     "year": 2016,
-                    "country": "USA",
-                    "genre": "drama, crime",
+                    "countries": ["USA"],
+                    "genres": ["Drama", "Crime"],
                     "duration": 3600,
-                    "rating": {"age": 14, "imdb": 9.0, "user": 9.6},
+                    "ageRating": 14,
+                    "contentRating": {"imdb": 9.0, "user": 9.6},
                     "watched": true,
         
                     "recommendationExplanation": "Because you watched Something",
@@ -229,8 +226,7 @@ Notes on object reconstruction:
                     
                     "start": 1469544033000,
                     "channelId": 5001,
-                    "channelIcon": "<hash>",
-                    "catchUpRecorded": true
+                    "channelIcon": "<hash>"
                 },
                 {
                     "id": "1002",
@@ -239,15 +235,15 @@ Notes on object reconstruction:
                     "description": "Odličen slovenski dokumentarec o plastiki z malo drugačnega zornega kota, njenih vplivih na vas in okolje.",
                     "poster": "<hash>",
                     "background": "<hash>",
-                    "cast": "Uroš Robič, Žiga Čamernik",
-                    "directors": "Uroš Robič, Miha Dulmin",
+                    "cast": ["Uroš Robič", "Žiga Čamernik"],
+                    "directors": ["Uroš Robič", "Miha Dulmin"],
                     "year": 2013,
-                    "country": "SI",
-                    "genre": "drama",
+                    "countries": ["SI"],
+                    "genres": ["Drama"]
                     "duration": 4140,
-                    "rating": {"age": 0, "imdb": null, "user": 9.6},
+                    "ageRating": 14,
+                    "contentRating": {"imdb": null, "user": 9.6},
                     "watched": true,
-                    "resource": null,
                      
                     "recommendationExplanation": "Because you watched something",
         
@@ -257,8 +253,7 @@ Notes on object reconstruction:
         
                     "start": 1469544033000,
                     "channelId": 5001,
-                    "channelIcon": "<hash>",
-                    "catchUpRecorded": true
+                    "channelIcon": "<hash>"
                 },
                 {
                     "id": "1003",
@@ -267,15 +262,15 @@ Notes on object reconstruction:
                     "description": "A former Special Forces operative turned mercenary is subjected to a rogue experiment that leaves him with accelerated healing powers, adopting the...",
                     "poster": "<hash>",
                     "background": "<hash>",
-                    "cast": "Ryan Reynolds, Morena Baccarin, T.J. Miller",
-                    "directors": "Tim Miller",
+                    "cast": ["Ryan Reynolds", "Morena Baccarin", "T.J. Miller"],
+                    "directors": ["Tim Miller"]
                     "year": 2016,
-                    "country": "USA",
-                    "genre": "action, adventure, comedy",
+                    "countries": ["USA"],
+                    "genres": ["action", adventure", "comedy"],
                     "duration": 6480,
-                    "rating": {"age": 12, "imdb": 8.1, "user": 7.2},
+                    "ageRating": 12,
+                    "contentRating": {"imdb": 8.1, "user": 7.2},
                     "watched": false,
-                    "resource": null,
                        
                     "recommendationExplanation": null,
         
@@ -285,17 +280,18 @@ Notes on object reconstruction:
                      
                     "start": null,
                     "channelId": null,
-                    "channelIcon": null,
-                    "catchUpRecorded": null
+                    "channelIcon": null
                 }
             ],
-            "linkTemplates": {
-                "poster": "http://hostnameA/images/{{hash}} //quality is determined by app, absolute URL",
-                "background": "http://hostnameB/images/{{hash}} // see above",
-                "channelIcon": "http://hostnameC/images/{{hash}} // see above"
-            },
             "previousPageLink": "/aggie/1/tvdashboard/for-me/contents?language=si&page=1 //updated page parameters from request",
             "nextPageLink": "/aggie/1/tvdashboard/for-me/contents?language=si&page=3 // see above"
+        }
+        },
+        "linkTemplates": {
+            "poster": "http://hostnameA/images/{{hash}} //quality is determined by app, absolute URL",
+            "background": "http://hostnameB/images/{{hash}} // see above",
+            "channelIcon": "http://hostnameC/images/{{hash}} // see above"
+        }
         }
 
 + Response 204 (no/body)
@@ -328,65 +324,32 @@ Notes on object reconstruction:
             "message": "Row does not exits."
         } 
  
-## Content details [/{userId}/tvdashboard/rows/{rowTag}/contents/{id}{?language,sibling}]
-Content details.
+## Content actions [/{userId}/tvdashboard/contents/{id}{?language,sibling}]
+Actions available for dashboard content. 
 
 + Parameters
     + userId: `1` (string)
-    + rowTag: `for-me` (string)
     + id: `2342` (string)
-    + language: `en` (string) - (Optional) Defaults to `en`.
     + sibling: `next|previous` (string) - (Optional) Ignored by default.
 
-### Content details [GET]
-Method returns single Content's child types without some restrictions as long strings 
-trimming and featuring extra fields. Method can return next or previous sibling of 
-specified contents id.
-Notes on parsing: 
-- Additional field: productId, populated where there could be some entity from MW 
-referenced. 
-
+### Content actions   [GET]
+Method can return next or previous sibling of specified contents id.
 
 + Response 200 (application/json)
 
-       
         {
-            "list": [
-                {
-                    "id": "1001",
-                    "type": "series",
-                    "title": "House of Cards",
-                    "description": "A Congressman works with his equally conniving wife to exact revenge on the people who betrayed him.",
-                    "poster": "<hash>",
-                    "background": "<hash>",
-                    "cast": "Kevin Spacey, Michel Gill, Robin Wright",
-                    "directors": "James Foley, Robin Wright",
-                    "year": 2016,
-                    "country": "USA",
-                    "genre": "drama, crime",
-                    "duration": 3600,
-                    "rating": {"age": 14, "imdb": 9.0, "user": 9.6},
-                    "watched": true,
-                    
-                    "series": {"season": 3, "episode": 13, "lastWatchedSeason": 2},
-                    "subTitle": "Chapter 52",
-                    "contentKey": "series-1001",
-                    
-                    "recommendationExplanation": null,
-                    
-                    "start": 1469544033000,
-                    "channelId": 5001,
-                    "channelIcon": "<hash>",
-                    "catchUpRecorded": true
-                    
-                    "externalId": "31534"
-                }
-            ],
-            "linkTemplates": {
-                "poster": "http://hostnameA/images/{{hash}}",
-                "background": "http://hostnameB/images/{{hash}}",
-                "channelIcon": "http://hostnameC/images/{{hash}}"
-            }
+            "id": "1001",
+            "actions": [
+                {"action": "play", "mrs": []}, 
+                {"action": "resume-play", "offset": 3600},
+                {"action": "favorite"},
+                {"action": "un-favorite"}, 
+                {"action": "adopt-recording", "showId": "1234"},
+                {"action": "buy", "productIds": ["31534", "56756"]},
+                {"action": "details"},
+                {"action": "like"},
+                {"action": "dislike"}
+            ]
         }
     
 + Response 400 (application/json)
@@ -434,7 +397,7 @@ referenced.
         
         
 
-## Users properites of an Content [/{userId}/tvdashboard/rows/{rowTag}/contents/{id}{?watched}]
+## Users properites of an Content [/{userId}/tvdashboard/contents/{id}{?watched}]
 Method updates various properties of a Content in users context. Unspecified parameter doesn't
 change anything.
 
@@ -460,16 +423,17 @@ change anything.
         }  
  
 
-## Search [/{userId}/tvdashboard/contents/search{?q,page,language}]
+## Search [/{userId}/tvdashboard/contents/search{?q,page,pageSize,language}]
 Search provides slimmed response as much as possible for quick transmission and parsing.
 Too short query string returns HTTP 400. Empty query result returns HTTP 204. 
 
 + Parameters
     + q: `news` (String) - Return results for that includes search results.
     + page: `1` (number) - (Optional) Results for page, 1 based.
+    + pageSize: `10` (number) - (Optional) Defines page size from 1-50.
     + language: `en` (string) - (Optional) Defaults to `en`.
     
-### Search [GET]  
+### Search [GET]
 
 + Response 200 (application/json)
 
@@ -481,19 +445,25 @@ Too short query string returns HTTP 400. Empty query result returns HTTP 204.
                     "title": "House of Cards",
                     "description": "A Congressman works with his equally conniving wife to exact revenge on the people who betrayed him.",
                     "duration": 3600,
-                    "rating": {"age": 14, "imdb": 9.0, "user": 9.6},
+                    "ageRating": 14,
+                    "contentRating": {"imdb": 9.0, "user": 9.6},
                     "watched": true,
+                    "poster": "<hash>",
+                    "channelIcon": "<hash>",
                     
                     "series": {"season": 3, "episode": 13, "lastWatchedSeason": 2},
                     "subTitle": "Chapter 52",
                     
                     "start": 1469544033000,
-                    "channelId": 5001,
-                    "chatchUpRecorded": true
+                    "channelId": 5001
                 }
             ],
-            "previousPageLink": "/aggie/1/tvdashboard/contents/search?language=si&page=1,
-            "nextPageLink": "/aggie/1/tvdashboard/contents/search?language=si&page=3
+            "previousPageLink": "/aggie/1/tvdashboard/contents/search?language=si&page=1",
+            "nextPageLink": "/aggie/1/tvdashboard/contents/search?language=si&page=3",
+            "linkTemplates": {
+                "poster": "http://hostnameA/images/{{hash}} //quality is determined by app, absolute URL",
+                "channelIcon": "http://hostnameC/images/{{hash}} // see above"
+            }
         }
         
 + Response 204 (no body)
@@ -506,5 +476,3 @@ Too short query string returns HTTP 400. Empty query result returns HTTP 204.
             "error": "query-too-short",
             "message": "q parameter must be longer than 3 characters.",           
         }
- 
- 
