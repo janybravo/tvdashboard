@@ -52,6 +52,7 @@ Returns user configuration specific to TV recommendation dashboard.
             "message": "Desired user does not exist."
         }
 
+
 ## Change users recommendation profile [/{userId}/tvdashboard/profile{?recommendationPersonalized,isDashboardDefaultScreen,recommendationExplanation}]
 
 + Parameters
@@ -60,7 +61,7 @@ Returns user configuration specific to TV recommendation dashboard.
     + isDashboardDefaultScreen: `false` (boolean) - (Optional) Defaults to false. User preference of an TV dashboard beeing default screen on any device.
     + recommendationExplanation: `true` (boolean) - (Optional) Defaults to true. User preference on showing explanations on recommended content selection.
 
-### Change users recommendation profile [GET]
+### Change users recommendation profile [PUT]
 Unspecified parameter doesn't change anything.
 
 + Response 200 (application/json)
@@ -73,14 +74,14 @@ Unspecified parameter doesn't change anything.
 
         {
             "error": "userid-does-not-exist",
-            "message": "Desired user does not exist."
+            "message": "Requested user does not exist."
         }
 
 + Response 400 (application/json)
 
         {
             "error": "bad-arguments",
-            "message": "Some property must be specified and value must be supported."
+            "message": "Bad arguments."
         }
 
 ## Recommendation consent message [/{userId}/tvdashboard/consent{?language}]
@@ -94,6 +95,20 @@ Unspecified parameter doesn't change anything.
 
         {
             "message": "Consent text here"
+        }
+
++ Response 400 (application/json)
+
+        {
+            "error": "userid-does-not-exist",
+            "message": "Requested user does not exist."
+        }
+
++ Response 400 (application/json)
+
+        {
+            "error": "bad-arguments",
+            "message": "Bad arguments."
         }
 
 
@@ -165,12 +180,26 @@ ancestor Row;
             }
         ]
 
++ Response 400 (application/json)
+
+        {
+            "error": "userid-does-not-exist",
+            "message": "Requested user does not exist."
+        }
+
++ Response 400 (application/json)
+
+        {
+            "error": "bad-arguments",
+            "message": "Bad arguments."
+        }
+
 ## Row's list of contents  [/{userId}/tvdashboard/contents{?rowIds,page,pageSize,language}]
 Organized list of contents.
 
 + Parameters
     + userId: `1` (string)
-    + rowIds: `for-me` (array) Comma separated Row/Category identification strings.
+    + rowIds: `for-me,action` (array) Comma separated Row/Category identification strings.
     + page: `2` (number) - (Optional) Returns some page.
     + pageSize: `10` (number) - (Optional) Defines page size from 1-50.
     + language: `en` (string) - (Optional) Defaults to `en`.
@@ -215,7 +244,7 @@ Notes on object reconstruction:
                         "subTitle": "Chapter 52",
                         "seriesBaseId": "1001",
                         "start": 1469544033000,
-                        "channelId": 5001,
+                        "channelId": "5001",
                         "channelIcon": "<hash>"
                     },
                     {
@@ -232,7 +261,7 @@ Notes on object reconstruction:
                         "genres": ["Drama"]
                         "duration": 4140,
                         "ageRating": 14,
-                        "contentRating": {"imdb": null, "user": 9.6},
+                        "contentRating": {"imdb": 0, "user": 9.6},
                         "watched": true,
                         "recommendationExplanation": "Because you watched something",
                         "series": {},
@@ -253,12 +282,12 @@ Notes on object reconstruction:
                         "directors": ["Tim Miller"]
                         "year": 2016,
                         "countries": ["USA"],
-                        "genres": ["action", adventure", "comedy"],
+                        "genres": ["Action", "Adventure", "Comedy"],
                         "duration": 6480,
                         "ageRating": 12,
                         "contentRating": {"imdb": 8.1, "user": 7.2},
                         "watched": false,
-                        "recommendationExplanation": null,
+                        "recommendationExplanation": "",
                         "series": {},
                         "subTitle": "",
                         "seriesBaseId": "",
@@ -284,14 +313,14 @@ Notes on object reconstruction:
 
         {
             "error": "userid-does-not-exist",
-            "message": "Desired user does not exist."
+            "message": "Requested user does not exist."
         }
 
 + Response 400 (application/json)
 
         {
             "error": "language-is-unavailable-for-row",
-            "message": "Translation is unavailable."
+            "message": "Translation not available."
         }
 
 + Response 400 (application/json)
@@ -304,9 +333,10 @@ Notes on object reconstruction:
 + Response 400 (application/json)
 
         {
-            "error": "row-does-not-exist",
-            "message": "Row does not exits."
+            "error": "bad-arguments",
+            "message": "Bad arguments."
         }
+
 
 ## Content actions [/{userId}/tvdashboard/contents/{id}/actions{?language}]
 Actions available for dashboard content.
@@ -339,23 +369,29 @@ Method returns available actions for some content.
 
         {
             "error": "userid-does-not-exist",
-            "message": "Desired user does not exist."
+            "message": "Requested user does not exist."
         }
 
 + Response 400 (application/json)
 
         {
-            "error": "language-is-unavailable-for-content",
-            "message": "Translation is unavailable."
+            "error": "language-is-unavailable-for-row",
+            "message": "Translation not available."
         }
 
 + Response 400 (application/json)
 
         {
             "error": "content-id-does-not-exist",
-            "message": "Desired content does not exits."
+            "message": "Requested content does not exits."
         }
 
++ Response 400 (application/json)
+
+        {
+            "error": "bad-arguments",
+            "message": "Bad arguments."
+        }
 
 
 ## Users properties of an Content [/{userId}/tvdashboard/contents/{id}/properties{?watched}]
@@ -379,8 +415,9 @@ change anything.
 
         {
             "error": "bad-arguments",
-            "message": "Some property must be specified and value must be supported."
+            "message": "Bad arguments."
         }
+
 
 
 ## Search [/{userId}/tvdashboard/contents/search{?q,page,pageSize,language}]
@@ -430,7 +467,6 @@ Too short query string returns HTTP 400. Empty query result returns HTTP 204.
 
 
 + Response 400 (application/json)
-
 
         {
             "error": "query-too-short",
