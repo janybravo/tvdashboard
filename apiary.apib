@@ -1,5 +1,5 @@
 FORMAT: 1A
-HOST: http://localhost:3000/aggie/v1/
+HOST: http://localhost:3000/aggie/v1/{regionId}/
 
 
 # TV Dashboard
@@ -114,6 +114,7 @@ Unspecified parameter doesn't change anything.
 
 ## Rows [/{userId}/tvdashboard/rows{?language}]
 + Parameters
+    + userId: `1` (string) By omiting this path fragment method returns regional aka. public result.
     + language: `en` (string) - (Optional) Defaults to `en`.
 
 ### List all Rows [GET]
@@ -152,29 +153,24 @@ ancestor Row;
                 {
                     "id": "popular",
                     "title": "Popular",
-                    "color": "#aa00cc"
                 },
                 {
                     "id": "scifi",
                     "title": "Sci-Fi",
-                    "color": "#aa11cc"
                     "list": [
                         {
                             "id": "pero-dislikes",
-                            "title": "Pero dislikes",
-                            "color": "#aabb00"
+                            "title": "Pero dislikes"
                         },
                         {
                             "id": "pero-dislikes-even-more",
-                            "title": "Pero dislikes even more",
-                            "color": "#aabb11"
+                            "title": "Pero dislikes even more"
                         }
                     ]
                 },
                 {
                     "id": "cartoons",
-                    "title": "Cartoons",
-                    "color": "#aacc00"
+                    "title": "Cartoons"
                 }
               ]
             }
@@ -198,7 +194,7 @@ ancestor Row;
 Organized list of contents.
 
 + Parameters
-    + userId: `1` (string)
+    + userId: `1` (string) By omiting this path fragment method returns regional aka. public result.
     + rowIds: `for-me,action` (array) Comma separated Row/Category identification strings.
     + page: `2` (number) - (Optional) Returns some page.
     + pageSize: `10` (number) - (Optional) Defines page size from 1-50.
@@ -224,7 +220,7 @@ Notes on object reconstruction:
             {
                 "mycontent":
                     [
-                        "id": "1001",
+                        "id": "SS1001",
                         "type": "series",
                         "title": "House of Cards",
                         "description": "A Congressman works with his equally conniving wife to exact revenge on the people who betrayed him.",
@@ -240,15 +236,19 @@ Notes on object reconstruction:
                         "contentRating": {"imdb": 9.0, "user": 9.6},
                         "watched": true,
                         "recommendationExplanation": "Because you watched Something",
-                        "series": {"season": 1, "episode": 1, "lastWatchedSeason": 2},
-                        "subTitle": "Chapter 52",
-                        "seriesBaseId": "1001",
+                        "series": {
+                            "season": 1,
+                            "episode": 1,
+                            "lastWatchedSeason": 2,
+                            "subTitle": "Chapter 52",
+                            "seriesBaseId": "SS1001",
+                        },
+                        "channel": {"id": "5001", "icon": "<hash>"},
                         "start": 1469544033000,
-                        "channelId": "5001",
-                        "channelIcon": "<hash>"
+                        "catchupEnabled": true
                     },
                     {
-                        "id": "1002",
+                        "id": "S1002",
                         "type": "show",
                         "title": "Plastik fantastik",
                         "description": "Odličen slovenski dokumentarec o plastiki z malo drugačnega zornega kota, njenih vplivih na vas in okolje.",
@@ -265,14 +265,12 @@ Notes on object reconstruction:
                         "watched": true,
                         "recommendationExplanation": "Because you watched something",
                         "series": {},
-                        "subTitle": "",
-                        "seriesBaseId": "",
+                        "channel": {"id": "5001", "icon": "<hash>"},
                         "start": 1469544033000,
-                        "channelId": 5001,
-                        "channelIcon": "<hash>"
+                        "catchupEnabled": true
                     },
                     {
-                        "id": "1003",
+                        "id": "V1003",
                         "type": "vod",
                         "title": "Deadpool",
                         "description": "A former Special Forces operative turned mercenary is subjected to a rogue experiment that leaves him with accelerated healing powers, adopting the...",
@@ -289,15 +287,14 @@ Notes on object reconstruction:
                         "watched": false,
                         "recommendationExplanation": "",
                         "series": {},
-                        "subTitle": "",
-                        "seriesBaseId": "",
+                        "channel": {},
                         "start": 0,
-                        "channelId": "",
-                        "channelIcon": ""
+                        "catchupEnabled": false
                     }
                     ],
-                    "previousPageLink": "/aggie/1/tvdashboard/for-me/contents?language=si&page=1 //updated page parameters from request",
-                    "nextPageLink": "/aggie/1/tvdashboard/for-me/contents?language=si&page=3 // see above"
+                    "previousPageLink": "/v1/aggie/1/tvdashboard/for-me/contents?language=si&page=1
+                     //updated page parameters from request",
+                    "nextPageLink": "/v1/aggie/1/tvdashboard/for-me/contents?language=si&page=3 // see above"
                 }
             },
             "linkTemplates": {
@@ -343,7 +340,7 @@ Actions available for dashboard content.
 
 + Parameters
     + userId: `1` (string)
-    + id: `2342` (string)
+    + id: `S2342` (string)
 
 ### Content actions   [GET]
 Method returns available actions for some content.
@@ -351,14 +348,15 @@ Method returns available actions for some content.
 + Response 200 (application/json)
 
         {
-            "id": "1001",
+            "id": "SS1001",
             "actions": [
                 {"action": "play", "mrs": []},
                 {"action": "resume-play", "offset": 3600},
                 {"action": "favorite"},
-                {"action": "un-favorite"},
+                {"action": "unfavorite"},
                 {"action": "adopt-recording", "showId": "1234"},
-                {"action": "buy", "productIds": ["31534", "56756"]},
+                {"action": "buy", "resource":
+                    "/v1/aggie/2/1/tvdashboard/contents/SS1001/purchase-products"},
                 {"action": "details"},
                 {"action": "like"},
                 {"action": "dislike"}
@@ -394,14 +392,16 @@ Method returns available actions for some content.
         }
 
 
-## Users properties of an Content [/{userId}/tvdashboard/contents/{id}/properties{?watched}]
+## Users properties of an Content [/{userId}/tvdashboard/contents/{id}/properties{?watched,favorite,like}]
 Method updates various properties of a Content in users context. Unspecified parameter doesn't
 change anything.
 
 + Parameters
     + userId: `1` (string)
-    + id: `2342` (string)
+    + id: `V2342` (string)
     + watched: true (boolean) - (Optional)
+    + favorite: false (boolean) - (Optional)
+    + like: true (boolean|null) - (Optional) Null value resets like state to as if was never set.
 
 ### Update properties of an Content [PUT]
 
@@ -437,7 +437,7 @@ Too short query string returns HTTP 400. Empty query result returns HTTP 204.
         {
             "list": [
                 {
-                    "id": "1001",
+                    "id": "SS1001",
                     "type": "series",
                     "title": "House of Cards",
                     "description": "A Congressman works with his equally conniving wife to exact revenge on the people who betrayed him.",
@@ -446,13 +446,15 @@ Too short query string returns HTTP 400. Empty query result returns HTTP 204.
                     "contentRating": {"imdb": 9.0, "user": 9.6},
                     "watched": true,
                     "poster": "<hash>",
-                    "channelIcon": "<hash>",
-
-                    "series": {"season": 3, "episode": 13, "lastWatchedSeason": 2},
-                    "subTitle": "Chapter 52",
-
+                    "series": {
+                        "season": 3,
+                        "episode": 13,
+                        "lastWatchedSeason": 2,
+                        "subTitle": "Chapter 52",
+                        "seriesBaseId": "SS1001",
+                    },
+                    "channel": {"id": "5001", "icon": "<hash>"},
                     "start": 1469544033000,
-                    "channelId": 5001
                 }
             ],
             "previousPageLink": "/aggie/1/tvdashboard/contents/search?language=si&page=1",
